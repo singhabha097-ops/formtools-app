@@ -12,8 +12,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
-      - run: unzip -q ./*.zip
-      - run: cd FormTools && gradle assembleDebug --no-daemon
+      - name: Check zip
+        run: |
+          echo "ZIP FILES:"; ls -la *.zip
+          if [ "$(ls *.zip | wc -l)" -ne 1 ]; then echo "PROBLEM: more than one zip. Delete the old ones."; exit 1; fi
+          unzip -oq ./*.zip
+          echo "GUAVA LINE:"; grep -n guava FormTools/app/build.gradle.kts || echo "NO GUAVA = OLD ZIP"
+      - name: Build
+        run: |
+          cd FormTools
+          gradle assembleDebug --no-daemon --console=plain > ../build.log 2>&1 || { grep -E "^e: |What went wrong" -A3 ../build.log | head -60; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: FormTools-debug-apk
